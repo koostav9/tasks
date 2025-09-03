@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(./show_access_logs.sh:*)",
+      "Bash(./show_error_logs.sh:*)",
+      "Bash(./show_modjk_logs.sh:*)",
+      "Bash(./show_server_status.sh:*)",
+      "Bash(./show_server_info.sh:*)",
+      "Bash(./show_jk_status.sh:*)",
+      "Bash(./start_apache.sh)",
+      "Bash(./stop_apache.sh)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
