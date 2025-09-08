@@ -54,40 +54,46 @@ show_apache_http_logs() {
     local instance_index=$(find_instance_index "$instance_name" "${APACHE_INST_NAME[@]}")
     
     if [ "$instance_index" -eq -1 ]; then
+        echo "Error: Apache instance '$instance_name' not found in configuration"
+        echo "Available instances: ${APACHE_INST_NAME[@]}"
         return 1
     fi
     
-    local http_alog="${APACHE_HTTP_ALOG[$instance_index]}"
+    echo "Apache HTTP Access Log for Instance: $instance_name"
+    echo "====================================================================================================="
     
-    if [ "$http_alog" != "-" ] && [ -n "$http_alog" ] && [ -f "$http_alog" ]; then
+    # HTTP Access 로그 출력
+    local http_alog="${APACHE_HTTP_ALOG[$instance_index]}"
+    local https_alog="${APACHE_HTTPS_ALOG[$instance_index]}"
+    local log_found=false
+    
+    if [ "$http_alog" != "-" ] && [ -n "$http_alog" ]; then
         echo "HTTP Log file: $http_alog"
         echo ""
-        tail -100 "$http_alog"
-        return 0
+        if [ -f "$http_alog" ]; then
+            tail -100 "$http_alog"
+            log_found=true
+        else
+            echo "HTTP log file not found: $http_alog"
+        fi
     fi
     
-    return 1
-}
-
-# Apache HTTPS access 로그 출력 함수
-show_apache_https_logs() {
-    local instance_name="$1"
-    local instance_index=$(find_instance_index "$instance_name" "${APACHE_INST_NAME[@]}")
-    
-    if [ "$instance_index" -eq -1 ]; then
-        return 1
-    fi
-    
-    local https_alog="${APACHE_HTTPS_ALOG[$instance_index]}"
-    
+    # HTTPS Access 로그 출력 (존재하는 경우만)
     if [ "$https_alog" != "-" ] && [ -n "$https_alog" ] && [ -f "$https_alog" ]; then
+        if [ "$log_found" = true ]; then
+            echo ""
+            echo "-----------------------------------------------------------------------------------------------------"
+        fi
         echo "HTTPS Log file: $https_alog"
         echo ""
         tail -100 "$https_alog"
-        return 0
+        log_found=true
     fi
     
-    return 1
+    if [ "$log_found" = false ]; then
+        echo "No SSL access log files found for instance: $instance_name"
+        return 1
+    fi
 }
 
 
@@ -103,39 +109,7 @@ main() {
     echo "====================================================================================================="
     echo "Instance: $instance_name"
     
-    # 인스턴스 존재 여부 확인
-    local instance_index=$(find_instance_index "$instance_name" "${APACHE_INST_NAME[@]}")
-    if [ "$instance_index" -eq -1 ]; then
-        echo "Error: Apache instance '$instance_name' not found in configuration"
-        echo "Available instances: ${APACHE_INST_NAME[@]}"
-        echo "====================================================================================================="
-        return 1
-    fi
-    
-    echo "Apache Access Log for Instance: $instance_name"
-    echo "====================================================================================================="
-    
-    local http_shown=false
-    local https_shown=false
-    
-    # HTTP 로그 출력
-    if show_apache_http_logs "$instance_name"; then
-        http_shown=true
-    fi
-    
-    # HTTPS 로그 출력 (HTTP 로그가 출력되었으면 구분선 추가)
-    if show_apache_https_logs "$instance_name"; then
-        if [ "$http_shown" = true ]; then
-            echo ""
-            echo "-----------------------------------------------------------------------------------------------------"
-        fi
-        https_shown=true
-    fi
-    
-    # 로그가 하나도 없는 경우
-    if [ "$http_shown" = false ] && [ "$https_shown" = false ]; then
-        echo "No access log files found for instance: $instance_name"
-    fi
+    show_apache_http_logs "$instance_name"
     
     echo "====================================================================================================="
     echo "Log display completed."
