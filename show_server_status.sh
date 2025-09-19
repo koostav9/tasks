@@ -52,21 +52,50 @@ find_instance_index() {
 show_apache_server_status() {
     local instance_name="$1"
     local instance_index=$(find_instance_index "$instance_name" "${APACHE_INST_NAME[@]}")
-    
+
     if [ "$instance_index" -eq -1 ]; then
         return 1
     fi
-    
+
+    local https_port="${APACHE_HTTPS_PORT[$instance_index]}"
     local http_port="${APACHE_HTTP_PORT[$instance_index]}"
-    
-    if [ "$http_port" != "-" ] && [ -n "$http_port" ]; then
-        local status_url="http://${http_port}/server-status"
-        echo "Server Status URL: $status_url"
+
+    # HTTPS 포트가 설정되어 있으면 HTTPS를 우선 시도
+    if [ "$https_port" != "-" ] && [ -n "$https_port" ]; then
+        local status_url="https://${https_port}/server-status"
+        echo "Server Status URL (HTTPS): $status_url"
         echo ""
-        
+
         # curl 명령어 존재 여부 확인
         if command -v curl >/dev/null 2>&1; then
-            # curl을 사용하여 server-status 요청
+            # curl을 사용하여 HTTPS server-status 요청
+            if curl -s --connect-timeout 10 --max-time 30 -k \
+                   -H "User-Agent: Apache-Monitor-Script" \
+                   "$status_url" 2>/dev/null; then
+                return 0
+            fi
+        elif command -v wget >/dev/null 2>&1; then
+            # wget을 사용하여 HTTPS server-status 요청 (curl이 없는 경우)
+            if wget -q --timeout=30 --tries=1 --no-check-certificate \
+                   --user-agent="Apache-Monitor-Script" \
+                   -O - "$status_url" 2>/dev/null; then
+                return 0
+            fi
+        fi
+
+        echo "Warning: HTTPS request failed, trying HTTP..."
+        echo ""
+    fi
+
+    # HTTP 포트로 시도 (HTTPS가 실패했거나 설정되지 않은 경우)
+    if [ "$http_port" != "-" ] && [ -n "$http_port" ]; then
+        local status_url="http://${http_port}/server-status"
+        echo "Server Status URL (HTTP): $status_url"
+        echo ""
+
+        # curl 명령어 존재 여부 확인
+        if command -v curl >/dev/null 2>&1; then
+            # curl을 사용하여 HTTP server-status 요청
             if curl -s --connect-timeout 10 --max-time 30 \
                    -H "User-Agent: Apache-Monitor-Script" \
                    "$status_url" 2>/dev/null; then
@@ -78,10 +107,11 @@ show_apache_server_status() {
                 echo "- server-status module is not enabled"
                 echo "- Network connectivity issues"
                 echo "- Access restrictions on server-status"
+                echo "- HTTPS redirect is enforced (check HTTPS configuration)"
                 return 1
             fi
         elif command -v wget >/dev/null 2>&1; then
-            # wget을 사용하여 server-status 요청 (curl이 없는 경우)
+            # wget을 사용하여 HTTP server-status 요청 (curl이 없는 경우)
             if wget -q --timeout=30 --tries=1 \
                    --user-agent="Apache-Monitor-Script" \
                    -O - "$status_url" 2>/dev/null; then
@@ -93,6 +123,7 @@ show_apache_server_status() {
                 echo "- server-status module is not enabled"
                 echo "- Network connectivity issues"
                 echo "- Access restrictions on server-status"
+                echo "- HTTPS redirect is enforced (check HTTPS configuration)"
                 return 1
             fi
         else
@@ -100,7 +131,7 @@ show_apache_server_status() {
             return 1
         fi
     else
-        echo "Error: HTTP port not configured for instance: $instance_name"
+        echo "Error: Neither HTTP nor HTTPS port configured for instance: $instance_name"
         return 1
     fi
 }

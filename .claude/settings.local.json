@@ -9,7 +9,8 @@
       "Bash(./show_server_info.sh:*)",
       "Bash(./show_jk_status.sh:*)",
       "Bash(./start_apache.sh)",
-      "Bash(./stop_apache.sh)"
+      "Bash(./stop_apache.sh)",
+      "Bash(dir show_:*)"
     ],
     "deny": [],
     "ask": []
