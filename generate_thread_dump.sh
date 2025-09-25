@@ -127,11 +127,11 @@ show_thread_dumps() {
     echo ""
     
     # 최근 생성된 thread dump 파일들 찾기 (최근 5분 이내)
-    local recent_dumps=$(find "$expanded_dump_dir" -name "*${instance_name}*" -type f -mmin -5 2>/dev/null | sort -t)
+    local recent_dumps=$(find "$expanded_dump_dir" -name "*${instance_name}*" -type f -mmin -5 2>/dev/null | sort)
     
     if [ -z "$recent_dumps" ]; then
         # 인스턴스명 패턴으로 찾지 못한 경우 일반적인 패턴으로 재시도
-        recent_dumps=$(find "$expanded_dump_dir" -name "*.dump" -o -name "*thread*" -o -name "*tdump*" 2>/dev/null | head -10 | sort -t)
+        recent_dumps=$(find "$expanded_dump_dir" -name "*.dump" -o -name "*thread*" -o -name "*tdump*" 2>/dev/null | head -10 | sort)
     fi
     
     if [ -n "$recent_dumps" ]; then
